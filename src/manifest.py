@@ -1,9 +1,10 @@
 """Command-line tool to work with redpesk application manifests"""
 
 import argparse
-import colorlog
-from enum import StrEnum
 import sys
+from enum import StrEnum
+
+import colorlog
 
 from check import check
 
@@ -62,7 +63,7 @@ if args.subcommand == SubCmd.CHECK_CMD:
     handler.setStream(sys.stdout)
 handler.setFormatter(
     colorlog.ColoredFormatter(
-        fmt="{log_color}{levelname:9}{name:8}{reset}{message}", style="{"
+        fmt="{log_color}{levelname:9}{reset}{message}", style="{"
     )
 )
 logger = colorlog.getLogger()
@@ -76,12 +77,7 @@ match args.subcommand:
         parser.print_help()
         sys.exit(1)
     case SubCmd.CHECK_CMD:
-        if check(args.path, logger):
-            logger.info("Manifest file %s is correct", args.path)
-            sys.exit(0)
-        else:
-            logger.error("Manifest file %s contains error(s)", args.path)
-            sys.exit(1)
+        check(args.path, logger)
     case SubCmd.EXPLAIN_CMD:
         raise NotImplementedError
     case SubCmd.GRAPH_CMD:

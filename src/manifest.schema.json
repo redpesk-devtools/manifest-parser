@@ -1,0 +1,363 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/manifest.schema.json",
+    "$defs": {
+        "required-permission": {
+            "description": "Permissions required by all targets of the manifest",
+            "oneOf": [
+                {
+                    "type": "array",
+                    "items": {
+                        "description": "Value of the permission",
+                        "type": "string"
+                    },
+                    "minItems": 1
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "description": "Value of the permission",
+                                "type": "string"
+                            },
+                            "value": {
+                                "description": "Whether the permission is required or not",
+                                "type": "string",
+                                "enum": ["required", "optional"]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": ["name", "value"]
+                    },
+                    "minItems": 1
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": {
+                        "description": "Key is the permission's value, value is whether the permission is required or not",
+                        "type": "string",
+                        "enum": ["required", "optional"]
+                    }
+                },
+                {
+                    "type": "object",
+                    "additionalProperties": {
+                        "description": "Canonical state: key is the permission's value, value is an object {name: string, value: string}",
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "description": "Value of the permission, same as object key",
+                                "type": "string"
+                            },
+                            "value": {
+                                "description": "Whether the permission is required or not",
+                                "type": "string",
+                                "enum": ["required", "optional"]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": ["name", "value"]
+                    }
+                }
+            ]
+        },
+        "api-list": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "Name of the required API, URI if value is tcp",
+                        "type": "string"
+                    },
+                    "value": {
+                        "description": "Method used to connect to the required API",
+                        "type": "string",
+                        "enum": ["auto", "ws", "dbus", "tcp"]
+                    }
+                },
+                "required": ["name", "value"],
+                "additionalProperties": false,
+                "if": {"properties": {"value": {"const": "tcp"}}},
+                "then": {"properties": {"name": {
+                    "pattern": "^([a-z0-9\\-]{1,63}\\.)*[a-z0-9\\-]{1,63}:[0-9]{1,5}\\/[a-zA-Z0-9_.\\-]+$"
+                }}},
+                "else": {"properties": {"name": {"pattern": "^[a-zA-Z0-9_.\\-]+$"}}}
+            },
+            "minItems": 1
+        }
+    },
+    "title": "redpesk application framework manifest",
+    "description": "Manifest describing an application built using the redpesk application framework",
+    "type": "object",
+    "properties": {
+        "rp-manifest": {
+            "description": "Manifest file version",
+            "type": "integer",
+            "enum": [1]
+        },
+        "id": {
+            "description": "Application unique identifier",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.\\-]+$"
+        },
+        "version": {
+            "description": "Application version (should follow semantic versioning)",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9_.\\-]+$"
+                },
+                {
+                    "type": "number"
+                }
+            ]
+        },
+        "name": {
+            "description": "Application name, id is used if not specified",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.\\-\\s]+$"
+        },
+        "description": {
+            "description": "Application description",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.\\-\\s]+$"
+        },
+        "author": {
+            "description": "Application author",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.\\-\\s@<>]+$"
+        },
+        "license": {
+            "description": "Application license",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.\\-\\s]+$"
+        },
+        "file-properties": {
+            "description": "Set properties to files or directories of the package",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "Relative path of the file whose property must be set",
+                        "type": "string",
+                        "pattern": "^[^\\0]+$"
+                    },
+                    "value": {
+                        "description": "Describe the property set to apply to the file",
+                        "type": "string",
+                        "enum": ["executable", "public", "library", "config", "data", "www", "plug", "public-executable", "public-library"]
+                    }
+                },
+                "additionalProperties": false,
+                "required": ["name", "value"]
+            },
+            "minItems": 1
+        },
+        "required-permission": {
+            "$ref": "#/$defs/required-permission"
+        },
+        "plugs": {
+            "description": "Export files to applications that can receive plugins",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "Name of the exported directory",
+                        "type": "string",
+                        "pattern": "^[^\\0]+$"
+                    },
+                    "value": {
+                        "description": "Identifier of the application to which the files are exported",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9_.\\-]+$"
+                    }
+                },
+                "additionalProperties": false,
+                "required": ["name", "value"]
+            },
+            "minItems": 1
+        },
+        "defined-permission" : {
+            "description": "Informative field about permissions defined by the package"
+        },
+        "provided-binding": {
+            "description": "Export a binding to other binders",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "Binding name",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9_.\\-]+$"
+                    },
+                    "value": {
+                        "description": "Path of the exported binding",
+                        "type": "string",
+                        "pattern": "^[^\\0]+$"
+                    }
+                },
+                "additionalProperties": false,
+                "required": ["name", "value"]
+            },
+            "minItems": 1
+        },
+        "targets": {
+            "description": "Startable units of the application package",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "target": {
+                        "description": "Identifier of the target, at least one must be named 'main'",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9_.\\-]+$"
+                    },
+                    "content": {
+                        "description": "Main file of the target",
+                        "type": "object",
+                        "properties": {
+                            "src": {
+                                "description": "Path to the file",
+                                "type": "string",
+                                "pattern": "^[^\\0]+$"
+                            },
+                            "type": {
+                                "description": "Type of content",
+                                "type": "string",
+                                "enum": ["application/vnd.agl.native", "application/vnd.agl.service", "application/x-executable", "application/vnd.redpesk.resource", "application/vnd.redpesk.httpd"]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": ["src", "type"]
+                    },
+                    "icon": {
+                        "description": "Image file representing the target",
+                        "type": "object",
+                        "properties": {
+                            "src": {
+                                "description": "Path to the image file",
+                                "type": "string",
+                                "pattern": "^[^\\0]+$"
+                            },
+                            "type": {
+                                "description": "MIME type of the image file",
+                                "type": "string",
+                                "pattern": "^image\\/[a-z.+\\-]+$"
+                            },
+                            "size": {
+                                "description": "Size of the image",
+                                "type": "object",
+                                "properties": {
+                                    "x": {
+                                        "description": "Width of the image",
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "y": {
+                                        "description": "Height of the image",
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": ["x", "y"]
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": ["src"]
+                    },
+                    "name": {
+                        "description": "Name of the target, target is used if not specified",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9_.\\-\\s]+$"
+                    },
+                    "description": {
+                        "description": "Description of the target",
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9_.\\-\\s]+$"
+                    },
+                    "required-config": {
+                        "description": "List of configuration files for the binder",
+                        "type": "array",
+                        "items": {
+                            "description": "Path to a configuration file",
+                            "type": "string",
+                            "pattern": "^[^\\0]+$"
+                        }
+                    },
+                    "required-api": {
+                        "description": "List of APIs required by the target",
+                        "$ref": "#/$defs/api-list"
+                    },
+                    "required-binding": {
+                        "description": "List of bindings required by the package",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "description": "Name or path of the required binding",
+                                    "type": "string",
+                                    "pattern": "^[^\\0]+$"
+                                },
+                                "value": {
+                                    "description": "How to connect to the required binding",
+                                    "type": "string",
+                                    "enum": ["local", "extern"]
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": ["name", "value"]
+                        }
+                    },
+                    "provided-api": {
+                        "description": "List of APIs exported to other packages of the platform",
+                        "$ref": "#/$defs/api-list"
+                    },
+                    "required-permission": {
+                        "$ref": "#/$defs/required-permission"
+                    },
+                    "required-systemd": {
+                        "description": "Establish a requirement of the target to systemd's units (socket, target, service, mount…)",
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "unit": {
+                                    "description": "Name of the required unit with its extension",
+                                    "type": "string",
+                                    "pattern": "^[a-zA-Z0-9:\\-_.\\\\]+\\.(service|socket|device|mount|automount|swap|target|path|timer|slice|scope)$"
+                                },
+                                "mode": {
+                                    "description": "Mode of the dependency",
+                                    "type": "string",
+                                    "enum": ["weak", "strong", "strict"]
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": ["unit", "mode"]
+                        }
+                    }
+                },
+                "patternProperties": {
+                    "^x-[a-z\\-]+$": {}
+                },
+                "additionalProperties": false,
+                "required": ["target", "content"]
+            },
+            "minItems": 1,
+            "contains": {"properties": {"target": {"const": "main"}}}
+        }
+    },
+    "patternProperties": {
+        "^x-[a-z\\-]+$": {}
+    },
+    "required": ["rp-manifest", "id", "version"],
+    "additionalProperties": false
+}
