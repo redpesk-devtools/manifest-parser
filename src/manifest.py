@@ -40,7 +40,7 @@ subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 check_parser = subparsers.add_parser(
     SubCmd.CHECK_CMD, help="verify and lint a manifest file"
 )
-check_parser.add_argument("path", help="path of the manifest file to check")
+check_parser.add_argument("paths", help="paths of the manifest files to check", nargs="*")
 
 # explain parser
 explain_parser = subparsers.add_parser(
@@ -77,7 +77,12 @@ match args.subcommand:
         parser.print_help()
         sys.exit(1)
     case SubCmd.CHECK_CMD:
-        check(args.path, logger)
+        if check(args.paths, logger):
+            logger.info("All manifests are valid")
+            sys.exit(0)
+        else:
+            logger.warning("At least one manifest isn't valid, look for errors in above logs")
+            sys.exit(1)
     case SubCmd.EXPLAIN_CMD:
         raise NotImplementedError
     case SubCmd.GRAPH_CMD:
