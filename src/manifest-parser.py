@@ -72,6 +72,7 @@ logger.addHandler(handler)
 
 
 # dispatch according to subcommand
+# subcommands are expected to terminate the program
 match args.subcommand:
     case None:
         parser.print_help()
