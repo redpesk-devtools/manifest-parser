@@ -1,0 +1,70 @@
+# auth-binding-rs/manifest.yml resources
+auth-binding-rs-manifest: auth-binding-rs {
+  main: |md
+    Target: **main**
+    - type: `application/vnd.redpesk.resource`
+    - src: `lib/libafb_auth.so`
+  |
+}
+auth-binding-rs-binding: |md
+  - name: **auth-binding-rs**
+  - value: `lib/libafb_auth.so`
+|
+
+# auth-binding-rs/manifest.yml links
+auth-binding-rs-manifest -> auth-binding-rs-binding: provides
+
+# evse-auth-manager-binder/manifest.yml resources
+auth-manager-manifest: auth-manager {
+  main: |md
+    Target: **main**
+    - type: `application/vnd.agl.service`
+    - src: `etc/binding-auth.json`
+  |
+}
+auth-api: auth
+auth-api.shape: circle
+ocpp-api: ocpp
+ocpp-api.shape: circle
+
+# evse-auth-manager-binder/manifest.yml links
+auth-manager-manifest.main -> auth-binding-rs-binding: requires
+auth-manager-manifest.main -> scard-binding-rs-binding: requires
+auth-manager-manifest.main -> ocpp-binding-rs-binding: requires
+auth-manager-manifest.main -> auth-api: provides
+auth-manager-manifest.main -> ocpp-api: provides
+auth-manager-manifest.main -> engy-api: requires
+
+# evse-energy-manager-binder/manifest.yml resources
+energy-manager-manifest: energy-manager {
+  main: |md
+    Target: **main**
+    - type: `application/vnd.agl.service`
+    - src: `etc/binding-energy.json`
+  |
+}
+engy-api: engy
+engy-api.shape: circle
+
+# evse-energy-manager-binder/manifest.yml links
+energy-manager-manifest.main -> modbus-binding-binding: requires
+energy-manager-manifest.main -> energy-binding-rs-binding: requires
+energy-manager-manifest.main -> engy-api: provides
+
+# resources defined elsewhere
+scard-binding-rs-binding: |md
+  - name: **scard-binding-rs**
+  - value: `smth`
+|
+ocpp-binding-rs-binding: |md
+  - name: **ocpp-binding-rs**
+  - value: `smth`
+|
+energy-binding-rs-binding: |md
+  - name: **energy-binding-rs**
+  - value: `smth`
+|
+modbus-binding-binding: |md
+  - name: **modbus-binding**
+  - value: `smth`
+|

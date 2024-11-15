@@ -7,6 +7,7 @@ from enum import StrEnum
 import colorlog
 
 from check import check
+from graph import graph
 
 
 class SubCmd(StrEnum):
@@ -40,7 +41,9 @@ subparsers = parser.add_subparsers(title="subcommands", dest="subcommand")
 check_parser = subparsers.add_parser(
     SubCmd.CHECK_CMD, help="verify and lint a manifest file"
 )
-check_parser.add_argument("paths", help="paths of the manifest files to check", nargs="*")
+check_parser.add_argument(
+    "paths", help="paths of the manifest files to check", nargs="*"
+)
 
 # explain parser
 explain_parser = subparsers.add_parser(
@@ -53,6 +56,31 @@ graph_parser = subparsers.add_parser(
     SubCmd.GRAPH_CMD,
     help="generate a PlantUML graph showing how multiple manifests interact with each other",
 )
+graph_parser.add_argument(
+    "-o",
+    "--output",
+    default="graph",
+    help="output file name (extension will be appended)",
+)
+graph_parser.add_argument(
+    "-k",
+    "--keep-puml",
+    action="store_true",
+    help="do not delete the PlantUML diagram description file",
+)
+graph_parser.add_argument(
+    "-w",
+    "--overwrite",
+    action="store_true",
+    help="overwrite output files which already exist",
+)
+graph_parser.add_argument(
+    "-c", "--no-check", action="store_false", help="do not check if manifests are valid"
+)
+graph_parser.add_argument(
+    "paths", help="paths of the manifest files to draw a graph for", nargs="+"
+)
+
 args = parser.parse_args()
 
 
@@ -62,9 +90,7 @@ handler = colorlog.StreamHandler()
 if args.subcommand == SubCmd.CHECK_CMD:
     handler.setStream(sys.stdout)
 handler.setFormatter(
-    colorlog.ColoredFormatter(
-        fmt="{log_color}{levelname:9}{reset}{message}", style="{"
-    )
+    colorlog.ColoredFormatter(fmt="{log_color}{levelname:9}{reset}{message}", style="{")
 )
 logger = colorlog.getLogger()
 logger.setLevel(level=args.log.upper())
@@ -82,9 +108,18 @@ match args.subcommand:
             logger.info("All manifests are valid")
             sys.exit(0)
         else:
-            logger.warning("At least one manifest isn't valid, look for errors in above logs")
+            logger.warning(
+                "At least one manifest isn't valid, look for errors in above logs"
+            )
             sys.exit(1)
-    case SubCmd.EXPLAIN_CMD:
-        raise NotImplementedError
     case SubCmd.GRAPH_CMD:
+        graph(
+            args.output,
+            args.paths,
+            args.keep_puml,
+            args.overwrite,
+            args.no_check,
+            logger,
+        )
+    case SubCmd.EXPLAIN_CMD:
         raise NotImplementedError
