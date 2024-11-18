@@ -9,6 +9,16 @@ import subprocess
 from common import load_manifest
 
 IDT = "    "  # indentation
+STYLING = (
+    "skinparam ComponentFontStyle normal\n"
+    "skinparam ArtifactBackgroundColor #ffc2c2\n"
+    "skinparam InterfaceBackgroundColor #dbf3f5\n"
+    "skinparam PackageBackgroundColor #efefef\n"
+    "skinparam PackageBorderThickness 3\n"
+    "skinparam Linetype ortho\n"
+)
+COMPONENT_COLOR = "d9d2f3"
+
 MANIFEST_PATH_KEY = "__manifest_file_path"  # key added in "graph" method
 MAN_ID = "id"
 MAN_TARGETS = "targets"
@@ -58,8 +68,8 @@ def _binding_name_to_artifact_id(binding_name: str) -> str:
 def _generate_binding_artifact(binding: dict, out: TextIOWrapper) -> str:
     artid = _binding_name_to_artifact_id(binding[BDG_NAME])
     out.write(f"{IDT}artifact {artid} [\n")  # start binding
-    out.write(f"{2*IDT}name = **{binding[BDG_NAME]}**\n")
-    out.write(f'{2*IDT}value = ""{binding[BDG_VALUE]}""\n')
+    out.write(f"{2*IDT}**{binding[BDG_NAME]}**\n")
+    out.write(f'{2*IDT}""{binding[BDG_VALUE]}""\n')
     out.write(f"{IDT}]\n")  # end binding
     return artid
 
@@ -71,7 +81,8 @@ def _generate_puml_manifest_resources(man: dict, out: TextIOWrapper):
     # targets
     for tgt in man.get(MAN_TARGETS, []):
         out.write(
-            f'{IDT}component "**Target: {tgt[TGT_ID]}**" as {packid}.{tgt[TGT_ID]} {{\n'
+            f'{IDT}component "Target: **{tgt[TGT_ID]}**"'
+            f' as {packid}.{tgt[TGT_ID]} #{COMPONENT_COLOR} {{\n'
         )  # start target
         # apis
         for api in tgt.get(TGT_PROVIDED_APIS, []):
@@ -113,10 +124,10 @@ def _generate_puml_manifest_requires(
                         binding[BDG_NAME],
                     )
                     continue
-            out.write(f"{packid}.{tgt[TGT_ID]} --> {artid}: requires\n")
+            out.write(f"{packid}.{tgt[TGT_ID]} ..> {artid}\n")
         for api in tgt.get(TGT_REQUIRED_APIS, []):
             itfid = _api_name_to_interface_id(api[API_NAME])
-            out.write(f"{packid}.{tgt[TGT_ID]} --> {itfid}: requires\n")
+            out.write(f"{packid}.{tgt[TGT_ID]} --> {itfid}\n")
 
 
 def _generate_puml(
@@ -126,14 +137,16 @@ def _generate_puml(
     # be arrows pointing to undeclared resources, hence implicitly
     # declaring them, and preventing the real declaration later on
 
-    out.write(f"@startuml {diagram_name}\n\n")
+    out.write(f"@startuml {diagram_name}\n")
+    out.write(STYLING)
+    out.write("\n")
     # out.write("left to right direction\n") # TODO
     # first pass: package, targets, bindings, APIs
     out.write("' ##### DECLARED RESOURCES #####\n\n")
     for manifest in manifests:
         _generate_puml_manifest_resources(manifest, out)
         out.write("\n")
-    # second pass: requires arrows
+    # second pass: require arrows
     out.write("' ##### REQUIRED RESOURCES #####\n\n")
     for manifest in manifests:
         _generate_puml_manifest_requires(manifest, out, logger)
