@@ -57,61 +57,78 @@ def _binding_name_to_artifact_id(binding_name: str) -> str:
 
 def _generate_binding_artifact(binding: dict, out: TextIOWrapper) -> str:
     artid = _binding_name_to_artifact_id(binding[BDG_NAME])
-    out.write(f"artifact {artid} [\n")  # start binding
-    out.write(f"{IDT}name = **{binding[BDG_NAME]}**\n")
-    out.write(f'{IDT}value = ""{binding[BDG_VALUE]}""\n')
-    out.write("]\n")  # end binding
+    out.write(f"{IDT}artifact {artid} [\n")  # start binding
+    out.write(f"{2*IDT}name = **{binding[BDG_NAME]}**\n")
+    out.write(f'{2*IDT}value = ""{binding[BDG_VALUE]}""\n')
+    out.write(f"{IDT}]\n")  # end binding
     return artid
 
 
 def _generate_puml_manifest_resources(man: dict, out: TextIOWrapper):
     packid = _manifest_id_to_package_id(man[MAN_ID])
     out.write(f"'{man[MANIFEST_PATH_KEY]}\n")
-    # manifest and targets
     out.write(f"package {man[MAN_ID]} as {packid} {{\n")  # start manifest
+    # targets
     for tgt in man.get(MAN_TARGETS, []):
-        out.write(f"{IDT}component {packid}.{tgt[TGT_ID]} [\n")  # start target
-        out.write(f"{2*IDT}**Target: {tgt[TGT_ID]}**\n")
-        out.write(f"{2*IDT}type = {tgt[TGT_CONTENT][TGT_CONTENT_TYPE]}\n")
-        out.write(f'{2*IDT}src = ""{tgt[TGT_CONTENT][TGT_CONTENT_SRC]}""\n')
-        out.write(f"{IDT}]\n")  # end target
-    out.write("}\n")  # end manifest
-    # manifest provided bindings
-    for binding in man.get(MAN_BINDINGS, []):
-        artid = _generate_binding_artifact(binding, out)
-        out.write(f"{packid} ..> {artid}: provides\n")  # link binding to manifest
-    # target provided APIs & local-only required bindings
-    for tgt in man.get(MAN_TARGETS, []):
+        out.write(
+            f'{IDT}component "**Target: {tgt[TGT_ID]}**" as {packid}.{tgt[TGT_ID]} {{\n'
+        )  # start target
+        # apis
         for api in tgt.get(TGT_PROVIDED_APIS, []):
             itfid = _api_name_to_interface_id(api[API_NAME])
-            out.write(f"() {api[API_NAME]} as {itfid}\n")  # api
-            out.write(
-                f"{packid}.{tgt[TGT_ID]} ..> {itfid}: provides\n"
-            )  # link api to manifest
-        for binding in tgt.get(TGT_REQUIRED_BINDINGS, []):
-            if binding[BDG_VALUE] == "local":
-                _generate_binding_artifact(binding, out)
+            out.write(f"{2*IDT}() {api[API_NAME]} as {itfid}\n")
+        out.write(f"{IDT}}}\n")  # end target
+    # bindings
+    for binding in man.get(MAN_BINDINGS, []):
+        _generate_binding_artifact(binding, out)
+    out.write("}\n")  # end manifest
 
 
-def _generate_puml_manifest_requires(man: dict, out: TextIOWrapper):
+def _generate_puml_manifest_requires(
+    man: dict, out: TextIOWrapper, logger: logging.Logger
+):
     packid = _manifest_id_to_package_id(man[MAN_ID])
     out.write(f"'{man[MANIFEST_PATH_KEY]}\n")
     for tgt in man.get(MAN_TARGETS, []):
         for binding in tgt.get(TGT_REQUIRED_BINDINGS, []):
-            artid = _binding_name_to_artifact_id(binding[BDG_NAME])
+            # if required binding is local, link to matching provided-binding
+            # instead of required-binding directly; without that, arrows to
+            # local bindings are broken
+            if binding[BDG_VALUE] == "extern":
+                artid = _binding_name_to_artifact_id(binding[BDG_NAME])
+            else:  # local
+                # provided-binding.value should be equal to required-binding.name
+                search = [
+                    b
+                    for b in man.get(MAN_BINDINGS, [])
+                    if b[BDG_VALUE] == binding[BDG_NAME]
+                ]
+                if len(search) == 1:
+                    artid = _binding_name_to_artifact_id(search[0][BDG_NAME])
+                else:
+                    logger.warning(
+                        "In manifest %s: couldn't find a provided binding"
+                        " which matches the local required-binding of name %s",
+                        man[MANIFEST_PATH_KEY],
+                        binding[BDG_NAME],
+                    )
+                    continue
             out.write(f"{packid}.{tgt[TGT_ID]} --> {artid}: requires\n")
         for api in tgt.get(TGT_REQUIRED_APIS, []):
             itfid = _api_name_to_interface_id(api[API_NAME])
             out.write(f"{packid}.{tgt[TGT_ID]} --> {itfid}: requires\n")
 
 
-def _generate_puml(manifests: list[dict], out: TextIOWrapper, diagram_name: str):
-    out.write(f"@startuml {diagram_name}\n\n")
+def _generate_puml(
+    manifests: list[dict], out: TextIOWrapper, diagram_name: str, logger: logging.Logger
+):
     # "requires" must be generated in a second pass, otherwise there may
     # be arrows pointing to undeclared resources, hence implicitly
     # declaring them, and preventing the real declaration later on
 
-    # first pass: package, targets, bindings, APIs and provides arrows
+    out.write(f"@startuml {diagram_name}\n\n")
+    # out.write("left to right direction\n") # TODO
+    # first pass: package, targets, bindings, APIs
     out.write("' ##### DECLARED RESOURCES #####\n\n")
     for manifest in manifests:
         _generate_puml_manifest_resources(manifest, out)
@@ -119,7 +136,7 @@ def _generate_puml(manifests: list[dict], out: TextIOWrapper, diagram_name: str)
     # second pass: requires arrows
     out.write("' ##### REQUIRED RESOURCES #####\n\n")
     for manifest in manifests:
-        _generate_puml_manifest_requires(manifest, out)
+        _generate_puml_manifest_requires(manifest, out, logger)
         out.write("\n")
     out.write("@enduml\n")
 
@@ -156,10 +173,12 @@ def graph(
     logger.info("%i manifests loaded", len(manifests))
 
     # check they are valid
-    pass
+    if not no_check:
+        pass
 
     # generate diagram description
     out_puml_path = f"{output}.puml"
+    logger.info("Generate diagram description file %s", out_puml_path)
     if not overwrite:
         if os.path.exists(out_puml_path):
             logger.error(
@@ -168,10 +187,11 @@ def graph(
             )
             return False
     with open(out_puml_path, mode="w", encoding="utf-8") as out_puml:
-        _generate_puml(manifests, out_puml, output)
+        _generate_puml(manifests, out_puml, output, logger)
 
     # render to svg
     out_svg_path = f"{output}.svg"
+    logger.info("Render diagram to SVG file %s", out_svg_path)
     if not overwrite:
         if os.path.exists(out_svg_path):
             logger.error(

@@ -2,37 +2,26 @@
 
 'auth-binding-rs/manifest.yml declared resources
 package auth-binding-rs as auth_binding_rs_manifest {
-    component auth_binding_rs_manifest.main [
-        **Target: main**
-        type = application/vnd.redpesk.resource
-        src = ""lib/libafb_auth.so""
+    artifact auth_binding_rs_binding [
+        name = **auth-binding-rs**
+        value = ""lib/libafb_auth.so""
     ]
 }
-artifact auth_binding_rs_binding [
-    name = **auth-binding-rs**
-    value = ""lib/libafb_auth.so""
-]
 
 'evse-auth-manager-binder/manifest.yml declared resources
 package auth-manager as auth_manager_manifest {
-    component auth_manager_manifest.main [
-        **Target: main**
-        type = application/vnd.agl.service
-        src = ""etc/binding-auth.json""
-    ]
+    component "Target: main" as auth_manager_manifest.main {
+        () auth as auth_api
+        () ocpp as ocpp_api
+    }
 }
-() auth as auth_api
-() ocpp as ocpp_api
 
 'evse-energy-manager-binder/manifest.yml declared resources
 package energy-manager as energy_manager_manifest {
-    component energy_manager_manifest.main [
-        **Target: main**
-        type = application/vnd.agl.service
-        src = ""etc/binding-energy.json""
-    ]
+    component "Target: main" as energy_manager_manifest.main {
+        () engy as engy_api
+    }
 }
-() engy as engy_api
 
 'd'autres manifests pas traités ici
 artifact scard_binding_rs_binding [
@@ -53,21 +42,16 @@ artifact energy_binding_rs_binding [
 ]
 
 
-
-
 'auth-binding-rs/manifest.yml links
-auth_binding_rs_manifest .> auth_binding_rs_binding : provides
 
 'evse-auth-manager-binder/manifest.yml links
-auth_manager_manifest.main -> auth_binding_rs_binding : requires
+auth_manager_manifest.main --> auth_binding_rs_binding : requires
 auth_manager_manifest.main --> scard_binding_rs_binding : requires
 auth_manager_manifest.main --> ocpp_binding_rs_binding : requires
-auth_manager_manifest.main ..> auth_api : provides
-auth_manager_manifest.main ..> ocpp_api : provides
-auth_manager_manifest.main -> engy_api : requires
+auth_manager_manifest.main --> engy_api : requires
 
 'evse-energy-manager-binder/manifest.yml links
 energy_manager_manifest.main --> modbus_binding_binding : requires
 energy_manager_manifest.main --> energy_binding_rs_binding : requires
-energy_manager_manifest.main .> engy_api : provides
+
 @enduml
