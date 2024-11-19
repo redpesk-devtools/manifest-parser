@@ -5,7 +5,7 @@ import logging
 
 import jsonschema
 
-from common import load_manifest
+from .common import load_manifest
 
 SCHEMA_FILENAME = "manifest.schema.json"
 

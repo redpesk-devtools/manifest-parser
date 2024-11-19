@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 
-from common import load_manifest
+from .common import load_manifest
 
 IDT = "    "  # indentation
 STYLING = (
