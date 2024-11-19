@@ -1,0 +1,41 @@
+@startuml legend
+skinparam ComponentFontStyle normal
+skinparam ArtifactBackgroundColor #ffc2c2
+skinparam InterfaceBackgroundColor #dbf3f5
+skinparam PackageBackgroundColor #efefef
+skinparam PackageBorderThickness 3
+skinparam Linetype ortho
+
+left to right direction
+
+package "manifest" as manifest {
+    component "**target** declared in this manifest" as manifest.target #d9d2f3 {
+        () "API provided by the target" as api
+    }
+    artifact binding [
+        **Binding provided by the manifest**
+        ""Path of the binding .so file""
+    ]
+}
+
+package "another-manifest" as manifest2 {
+    component "another **target**" as manifest2.target #d9d2f3 {
+    }
+}
+
+manifest.target .> binding
+manifest2.target --> api
+
+note as N
+    **Manifests** are represented as UML packages <&folder>; <font color=purple>**targets**</font> as
+    components <&spreadsheet>; <font color=salmon>**bindings**</font> as artifacts <&file>, <font color=lightblue>**APIs**</font> as interfaces <&media-record>.
+
+    An arrow from X to Y means that X requires Y. <font color=lightblue>**API**</font> requirements
+    use plain arrows. <font color=salmon>**Binding**</font> requirements use dashed arrows.
+
+    <font color=purple>another **target**</font> from the **another-manifest** requires the <font color=lightblue>**API**</font>
+    provided by <font color=purple>**target**</font> in **manifest**. <font color=purple>**target**</font> from **manifest**
+    requires the <font color=salmon>**binding**</font> provided by the same manifest.
+end note
+
+@enduml
