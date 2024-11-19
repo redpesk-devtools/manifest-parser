@@ -35,5 +35,5 @@ def load_manifest(path: str, logger: logging.Logger) -> dict | None:
         )
         return None
 
-    logger.info("Manifest loaded from %s", path)
+    logger.debug("Loaded %s", path)
     return manifest

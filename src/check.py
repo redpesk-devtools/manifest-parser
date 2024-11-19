@@ -30,6 +30,7 @@ def check_one(path: str, schema: dict, logger: logging.Logger) -> bool:
     except (jsonschema.exceptions.ValidationError, TypeError):
         logger.exception("Validation failed for %s", path)
         return False
+    logger.info("Validated %s", path)
     return True
 
 
