@@ -29,7 +29,7 @@ def setup_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         description="tooling to work with redpesk application manifests",
-        epilog="source: https://github.com/redpesk-common/manifest-parser",
+        epilog="source: https://github.com/redpesk-devtools/manifest-parser",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
