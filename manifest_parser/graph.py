@@ -50,7 +50,7 @@ def _api_name_to_interface_id(api_name: str) -> str:
     Arg: API name, i.e. "my-api"
     Returns: PlantUML interface ID, i.e. "my_api_api"
     """
-    res = api_name.replace("-", "_")
+    res = api_name.replace("-", "_").replace(".", "_").replace(":", "_").replace("/", "_")
     res += "_api"
     return res
 
@@ -87,7 +87,7 @@ def _generate_puml_manifest_resources(man: dict, out: TextIOWrapper):
         # apis
         for api in tgt.get(TGT_PROVIDED_APIS, []):
             itfid = _api_name_to_interface_id(api[API_NAME])
-            out.write(f"{2*IDT}() {api[API_NAME]} as {itfid}\n")
+            out.write(f"{2*IDT}() \"{api[API_NAME]}\" as {itfid}\n")
         out.write(f"{IDT}}}\n")  # end target
     # bindings
     for binding in man.get(MAN_BINDINGS, []):
