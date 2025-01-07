@@ -3,7 +3,6 @@
 import argparse
 import logging
 import sys
-from enum import StrEnum
 
 import colorlog
 
@@ -11,7 +10,7 @@ from .check import check
 from .graph import graph
 
 
-class SubCmd(StrEnum):
+class SubCmd:
     """Enumeration of the available subcommands
     It is necessary to make an enumeration instead of just declaring these
     values as globals to avoid the SyntaxError "name capture makes remaining
@@ -121,30 +120,28 @@ def main():
 
     # dispatch according to subcommand
     # subcommands are expected to terminate the program
-    match args.subcommand:
-        case None:
-            parser.print_help()
-            sys.exit(1)
-        case SubCmd.CHECK_CMD:
-            if check(args.paths, logger):
-                logger.info("All manifests are valid")
-                sys.exit(0)
-            else:
-                logger.warning(
-                    "At least one manifest isn't valid, look for errors in above logs"
-                )
-                sys.exit(1)
-        case SubCmd.GRAPH_CMD:
-            graph(
-                args.output,
-                args.paths,
-                args.keep_puml,
-                args.overwrite,
-                args.no_check,
-                logger,
+    if args.subcommand == SubCmd.CHECK_CMD:
+        if check(args.paths, logger):
+            logger.info("All manifests are valid")
+            sys.exit(0)
+        else:
+            logger.warning(
+                "At least one manifest isn't valid, look for errors in above logs"
             )
-        case SubCmd.EXPLAIN_CMD:
-            raise NotImplementedError
-
+            sys.exit(1)
+    elif args.subcommand == SubCmd.GRAPH_CMD:
+        graph(
+            args.output,
+            args.paths,
+            args.keep_puml,
+            args.overwrite,
+            args.no_check,
+            logger,
+        )
+    elif arg.subcommand == SubCmd.EXPLAIN_CMD:
+        raise NotImplementedError
+    else:
+        parser.print_help()
+        sys.exit(1)
 if __name__ == "__main__":
     main()

@@ -4,7 +4,7 @@ import logging
 import yaml
 
 
-def load_manifest(path: str, logger: logging.Logger) -> dict | None:
+def load_manifest(path: str, logger: logging.Logger) -> dict:
     """Load a manifest.yml from file.
     Args:
         path: path to the manifest file
