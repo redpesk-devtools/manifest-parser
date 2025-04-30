@@ -138,7 +138,7 @@ def main():
             args.no_check,
             logger,
         )
-    elif arg.subcommand == SubCmd.EXPLAIN_CMD:
+    elif args.subcommand == SubCmd.EXPLAIN_CMD:
         raise NotImplementedError
     else:
         parser.print_help()
